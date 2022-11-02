@@ -68,7 +68,7 @@ class MainActivity : AppCompatActivity() {
             }
         }
         binding.backBtn.setOnClickListener {
-            if (currentNumber != "0" && currentNumber.length == 1) {
+            if ((currentNumber != "0" && currentNumber.length == 1) || (currentNumber.length == 2 && currentNumber[0] == '-')) {
                 currentNumber = "0"
                 binding.numbersField.text = currentNumber
             } else if (currentNumber != "0" && currentNumber.length > 1) {
@@ -93,6 +93,9 @@ class MainActivity : AppCompatActivity() {
         }
         binding.equalBtn.setOnClickListener {
             if (actions.size == 2 && currentNumber != "0") {
+                if (currentNumber[currentNumber.length - 1].toString() == ".") {
+                    currentNumber = currentNumber.dropLast(1)
+                }
                 actions.add(currentNumber)
                 var result = ""
                 for (i in 0 until actions.size) {
@@ -101,7 +104,7 @@ class MainActivity : AppCompatActivity() {
                 currentNumber = Expression(result).calculate().toString()
                 if (currentNumber.contains(".")) {
                     val index = currentNumber.indexOf(".")
-                    if (currentNumber[index + 1].toString() == "0" && index + 2 == currentNumber.length) {
+                    if (currentNumber[index + 1] == '0' && index + 2 == currentNumber.length) {
                         currentNumber = currentNumber.toDouble().roundToInt().toString()
                     }
                 }
@@ -142,6 +145,9 @@ class MainActivity : AppCompatActivity() {
         binding.nineBtn.setOnClickListener {
             clickNumber("9")
         }
+        binding.pointBtn.setOnClickListener {
+            clickNumber(".")
+        }
     }
 
     private fun clickNumber(number: String) {
@@ -155,12 +161,18 @@ class MainActivity : AppCompatActivity() {
 
     private fun clickActionBtn(actionText: String) {
         if (actions.size == 0 && currentNumber != "0") {
+            if (currentNumber[currentNumber.length - 1] == '.') {
+                currentNumber = currentNumber.dropLast(1)
+            }
             actions.add(currentNumber)
             actions.add(actionText)
             currentNumber = "0"
         } else if (actions.size == 2 && currentNumber == "0") {
             actions[1] = actionText
         } else {
+            if (currentNumber[currentNumber.length - 1] == '.') {
+                currentNumber = currentNumber.dropLast(1)
+            }
             actions.add(currentNumber)
             var result = ""
             for (i in 0 until actions.size) {
@@ -169,7 +181,7 @@ class MainActivity : AppCompatActivity() {
             currentNumber = Expression(result).calculate().toString()
             if (currentNumber.contains(".")) {
                 val index = currentNumber.indexOf(".")
-                if (currentNumber[index + 1].toString() == "0" && index + 2 == currentNumber.length) {
+                if (currentNumber[index + 1] == '0' && index + 2 == currentNumber.length) {
                     currentNumber = currentNumber.toDouble().roundToInt().toString()
                 }
             }
