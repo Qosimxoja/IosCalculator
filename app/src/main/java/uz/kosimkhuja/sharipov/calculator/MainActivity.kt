@@ -1,9 +1,8 @@
 package uz.kosimkhuja.sharipov.calculator
 
+import android.annotation.SuppressLint
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
-import android.provider.CalendarContract.Colors
-import androidx.core.content.ContextCompat
 import uz.kosimkhuja.sharipov.calculator.databinding.ActivityMainBinding
 import org.mariuszgromada.math.mxparser.*
 import kotlin.math.roundToInt
@@ -14,14 +13,14 @@ class MainActivity : AppCompatActivity() {
         ActivityMainBinding.inflate(layoutInflater)
     }
 
-    private var currentNumber = "0"
+    private var currentNumber = ""
     private val actions = ArrayList<String>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(binding.root)
         // loading actions
-        binding.numbersField.text = currentNumber
+        binding.numbersField.text = "0"
         loadOnNumberClicked()
         loadOnActionClicked()
         loadOnItemClicked()
@@ -30,13 +29,13 @@ class MainActivity : AppCompatActivity() {
     private fun loadOnItemClicked() {
         // adding logic to clear button
         binding.clearBtn.setOnClickListener {
-            currentNumber = "0"
+            currentNumber = ""
             binding.numbersField.text = "0"
             actions.clear()
         }
         // adding logic to positive/negative button
         binding.positiveNegativeBtn.setOnClickListener {
-            if (currentNumber != "0") {
+            if (currentNumber != "") {
                 if (currentNumber[0].toString() == "-") {
                     var appendStr = ""
                     for (i in 1 until currentNumber.length) {
@@ -56,7 +55,7 @@ class MainActivity : AppCompatActivity() {
         }
         // adding logic to percent button
         binding.percentBtn.setOnClickListener {
-            if (currentNumber != "0") {
+            if (currentNumber != "") {
                 currentNumber = (currentNumber.toDouble() / 100).toString()
                 if (currentNumber.contains(".")) {
                     val index = currentNumber.indexOf(".")
@@ -68,16 +67,17 @@ class MainActivity : AppCompatActivity() {
             }
         }
         binding.backBtn.setOnClickListener {
-            if ((currentNumber != "0" && currentNumber.length == 1) || (currentNumber.length == 2 && currentNumber[0] == '-')) {
-                currentNumber = "0"
-                binding.numbersField.text = currentNumber
-            } else if (currentNumber != "0" && currentNumber.length > 1) {
+            if ((currentNumber != "" && currentNumber.length == 1) || (currentNumber.length == 2 && currentNumber[0] == '-')) {
+                currentNumber = ""
+                binding.numbersField.text = "0"
+            } else if (currentNumber != "" && currentNumber.length > 1 && actions.size != 3) {
                 currentNumber = currentNumber.dropLast(1)
                 binding.numbersField.text = currentNumber
             }
         }
     }
 
+    @SuppressLint("SetTextI18n")
     private fun loadOnActionClicked() {
         binding.divideBtn.setOnClickListener {
             clickActionBtn("/")
@@ -92,16 +92,25 @@ class MainActivity : AppCompatActivity() {
             clickActionBtn("-")
         }
         binding.equalBtn.setOnClickListener {
-            if (actions.size == 2 && currentNumber != "0") {
+            if (actions.size == 2 && currentNumber != "") {
+                // checking if number ends with .
                 if (currentNumber[currentNumber.length - 1].toString() == ".") {
                     currentNumber = currentNumber.dropLast(1)
                 }
                 actions.add(currentNumber)
                 var result = ""
-                for (i in 0 until actions.size) {
-                    result += actions[i]
+                actions.forEach {
+                    result += it
                 }
                 currentNumber = Expression(result).calculate().toString()
+                // checking if result is NaN
+                if (currentNumber == "NaN") {
+                    currentNumber = ""
+                    binding.numbersField.text = "Not a number"
+                    actions.clear()
+                    return@setOnClickListener
+                }
+                // checking if result ends with 0
                 if (currentNumber.contains(".")) {
                     val index = currentNumber.indexOf(".")
                     if (currentNumber[index + 1] == '0' && index + 2 == currentNumber.length) {
@@ -109,7 +118,51 @@ class MainActivity : AppCompatActivity() {
                     }
                 }
                 binding.numbersField.text = currentNumber
-                actions.clear()
+            } else if (actions.size == 2) {
+                actions.add(actions[0])
+                var result = ""
+                actions.forEach {
+                    result += it
+                }
+                currentNumber = Expression(result).calculate().toString()
+                // checking if result is NaN
+                if (currentNumber == "NaN") {
+                    currentNumber = ""
+                    binding.numbersField.text = "Not a number"
+                    actions.clear()
+                    return@setOnClickListener
+                }
+                // checking if result ends with 0
+                if (currentNumber.contains(".")) {
+                    val index = currentNumber.indexOf(".")
+                    if (currentNumber[index + 1] == '0' && index + 2 == currentNumber.length) {
+                        currentNumber = currentNumber.toDouble().roundToInt().toString()
+                    }
+                }
+                binding.numbersField.text = currentNumber
+                actions[0] = currentNumber
+            } else if (actions.size == 3) {
+                var result = ""
+                for (i in 0 until actions.size) {
+                    result += actions[i]
+                }
+                currentNumber = Expression(result).calculate().toString()
+                // checking if result is NaN
+                if (currentNumber == "NaN") {
+                    currentNumber = ""
+                    binding.numbersField.text = "Not a number"
+                    actions.clear()
+                    return@setOnClickListener
+                }
+                // checking if result ends with 0
+                if (currentNumber.contains(".")) {
+                    val index = currentNumber.indexOf(".")
+                    if (currentNumber[index + 1] == '0' && index + 2 == currentNumber.length) {
+                        currentNumber = currentNumber.toDouble().roundToInt().toString()
+                    }
+                }
+                binding.numbersField.text = currentNumber
+                actions[0] = currentNumber
             }
         }
     }
@@ -146,30 +199,43 @@ class MainActivity : AppCompatActivity() {
             clickNumber("9")
         }
         binding.pointBtn.setOnClickListener {
-            clickNumber(".")
+            if (!currentNumber.contains(".")) {
+                if (currentNumber == "") {
+                    clickNumber("0.")
+                } else {
+                    clickNumber(".")
+                }
+            }
         }
     }
 
     private fun clickNumber(number: String) {
-        if (currentNumber == "0") {
+        if (currentNumber == "") {
             currentNumber = number
-        } else if (currentNumber != "0" && currentNumber.lastIndex <= 7) {
+        } else if (currentNumber.lastIndex <= 7 && actions.size != 3) {
             currentNumber += number
+        } else if (actions.size == 3) {
+            currentNumber = number
+            actions[2] = currentNumber
         }
         binding.numbersField.text = currentNumber
     }
 
+    @SuppressLint("SetTextI18n")
     private fun clickActionBtn(actionText: String) {
-        if (actions.size == 0 && currentNumber != "0") {
+        if (actions.size == 0 && currentNumber != "") {
+            // checking if number ends with .
             if (currentNumber[currentNumber.length - 1] == '.') {
                 currentNumber = currentNumber.dropLast(1)
             }
+            loosingZeroInTheEnd()
             actions.add(currentNumber)
             actions.add(actionText)
-            currentNumber = "0"
-        } else if (actions.size == 2 && currentNumber == "0") {
+            currentNumber = ""
+        } else if (actions.size == 2 && currentNumber == "") {
             actions[1] = actionText
-        } else {
+        } else if (actions.size == 2) {
+            // checking if number ends with .
             if (currentNumber[currentNumber.length - 1] == '.') {
                 currentNumber = currentNumber.dropLast(1)
             }
@@ -179,6 +245,14 @@ class MainActivity : AppCompatActivity() {
                 result += actions[i]
             }
             currentNumber = Expression(result).calculate().toString()
+            // checking if result is NaN
+            if (currentNumber == "NaN") {
+                currentNumber = ""
+                binding.numbersField.text = "Not a number"
+                actions.clear()
+                return
+            }
+            // checking if result ends with 0
             if (currentNumber.contains(".")) {
                 val index = currentNumber.indexOf(".")
                 if (currentNumber[index + 1] == '0' && index + 2 == currentNumber.length) {
@@ -186,11 +260,25 @@ class MainActivity : AppCompatActivity() {
                 }
             }
             binding.numbersField.text = currentNumber
+            actions[0] = currentNumber
+        } else if (actions.size == 3) {
             actions.clear()
             actions.add(currentNumber)
             actions.add(actionText)
-            currentNumber = "0"
+            currentNumber = ""
         }
     }
 
+    private fun loosingZeroInTheEnd() {
+        if (currentNumber.contains(".")) {
+            for (i in currentNumber.length - 1 downTo 0) {
+                if (currentNumber[i] == '0') {
+                    currentNumber = currentNumber.dropLast(1)
+                } else {
+                    break
+                }
+            }
+            binding.numbersField.text = currentNumber
+        }
+    }
 }
